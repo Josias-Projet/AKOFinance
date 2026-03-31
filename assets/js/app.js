@@ -71,6 +71,9 @@ let deferredInstallPrompt = null;
 let supabaseClient = null;
 let session = null;
 let persistenceMode = "local";
+let cloudStateHydrated = false;
+let activeView = "dashboard";
+let previousViewBeforeComposer = "dashboard";
 let dashboardFilters = {
   rangeType: "month",
   month: new Date().getMonth() + 1,
@@ -97,6 +100,42 @@ function getCurrentUser() {
 
 function isTouchDeviceLayout() {
   return window.matchMedia("(pointer: coarse), (hover: none)").matches;
+}
+
+function setActiveView(target) {
+  activeView = target;
+  document.querySelectorAll(".nav-link[data-view]").forEach(function (item) {
+    item.classList.toggle("is-active", item.getAttribute("data-view") === target);
+  });
+  document.querySelectorAll(".view").forEach(function (view) {
+    view.classList.toggle("is-active", view.id === `${target}View`);
+  });
+  const title = document.getElementById("viewTitle");
+  if (title) {
+    const activeNav = document.querySelector(`.nav-link[data-view="${target}"]`);
+    title.textContent = activeNav ? activeNav.textContent : "Nouvelle transaction";
+  }
+  document.getElementById("mobileNav").classList.remove("is-open");
+}
+
+function openTransactionComposer() {
+  populateSelects();
+  if (isTouchDeviceLayout()) {
+    previousViewBeforeComposer = activeView;
+    setActiveView("transactionEntry");
+    document.getElementById("viewTitle").textContent = "Nouvelle transaction";
+    window.scrollTo(0, 0);
+    return;
+  }
+  openModal("transactionModal");
+}
+
+function closeTransactionComposer() {
+  if (isTouchDeviceLayout()) {
+    setActiveView(previousViewBeforeComposer || "dashboard");
+    return;
+  }
+  closeModal("transactionModal");
 }
 
 function openModal(id) {
@@ -248,6 +287,7 @@ async function initSupabase() {
     persistenceMode = "cloud";
     await hydrateFromCloud();
   } else {
+    cloudStateHydrated = false;
     setSyncStatus("Supabase configure");
     setUserChip("Non connecte");
   }
@@ -261,6 +301,7 @@ async function initSupabase() {
       await hydrateFromCloud();
     } else {
       persistenceMode = "local";
+      cloudStateHydrated = false;
       state = loadLocalState();
       populateSelects();
       renderAll();
@@ -349,6 +390,7 @@ async function hydrateFromCloud() {
     }
 
     saveLocalState();
+    cloudStateHydrated = true;
     if (settingsRes.data && settingsRes.data.theme) {
       document.body.dataset.theme = settingsRes.data.theme;
       localStorage.setItem(THEME_KEY, settingsRes.data.theme);
@@ -359,6 +401,7 @@ async function hydrateFromCloud() {
     setSyncStatus("Mode cloud actif");
   } catch (error) {
     console.error(error);
+    cloudStateHydrated = false;
     showFeedback("Connexion cloud etablie, mais la base Supabase n'est pas encore prete ou incomplete.", true);
     setSyncStatus("Erreur sync cloud");
   }
@@ -366,7 +409,7 @@ async function hydrateFromCloud() {
 
 async function saveState() {
   saveLocalState();
-  if (persistenceMode === "cloud" && session && supabaseClient) {
+  if (persistenceMode === "cloud" && session && supabaseClient && cloudStateHydrated) {
     try {
       await saveRemoteState();
     } catch (error) {
@@ -445,6 +488,19 @@ async function saveRemoteState() {
   }));
 
   setSyncStatus("Mode cloud actif");
+}
+
+async function saveRemoteSettingsOnly() {
+  const currentUser = getCurrentUser();
+  if (!currentUser || !supabaseClient || !cloudStateHydrated) return;
+
+  const result = await supabaseClient.from("app_settings").upsert({
+    user_id: currentUser.id,
+    currency: state.settings.currency,
+    theme: document.body.dataset.theme || "light",
+  }, { onConflict: "user_id" });
+
+  if (result.error) throw result.error;
 }
 
 async function replaceRemoteTable(table, rows) {
@@ -632,7 +688,9 @@ function buildMetrics() {
     if (tx.type === "expense") balances[tx.account] = (balances[tx.account] || 0) - tx.amount;
     if (tx.type === "transfer") {
       balances[tx.account] = (balances[tx.account] || 0) - tx.amount;
-      balances[tx.destinationAccount] = (balances[tx.destinationAccount] || 0) + tx.amount;
+      if (tx.destinationAccount && tx.destinationAccount !== "expense_sink") {
+        balances[tx.destinationAccount] = (balances[tx.destinationAccount] || 0) + tx.amount;
+      }
     }
   });
 
@@ -947,11 +1005,24 @@ function populateSelects() {
     return typeof account === "string" ? account : account.name;
   }).filter(Boolean);
 
-  fillOptions("transactionCategory", state.categories && state.categories.length ? state.categories : defaultState.categories, true, "Choisir une categorie");
-  fillOptions("transactionBusiness", state.businesses && state.businesses.length ? state.businesses : defaultState.businesses, true, "Aucun business");
-  fillOptions("transactionAccount", accountNames.length ? accountNames : fallbackAccounts, false, "Choisir un compte");
-  fillOptions("transactionDestinationAccount", accountNames.length ? accountNames : fallbackAccounts, true, "Choisir un compte de destination");
+  const categories = state.categories && state.categories.length ? state.categories : defaultState.categories;
+  const businesses = state.businesses && state.businesses.length ? state.businesses : defaultState.businesses;
+  const accounts = accountNames.length ? accountNames : fallbackAccounts;
+
+  fillOptions("transactionCategory", categories, true, "Choisir une categorie");
+  fillOptions("transactionBusiness", businesses, true, "Aucun business");
+  fillOptions("transactionAccount", accounts, false, "Choisir un compte");
+  fillOptions("transactionDestinationAccount", accounts, true, "Choisir un compte de destination");
+  fillOptions("entryTransactionCategory", categories, true, "Choisir une categorie");
+  fillOptions("entryTransactionBusiness", businesses, true, "Aucun business");
+  fillOptions("entryTransactionAccount", accounts, false, "Choisir un compte");
+  fillOptions("entryTransactionDestinationAccount", accounts, true, "Choisir un compte de destination");
   document.getElementById("transactionDate").value = new Date().toISOString().slice(0, 10);
+  document.getElementById("entryTransactionDate").value = new Date().toISOString().slice(0, 10);
+  prependExpenseSinkOption("transactionDestinationAccount");
+  prependExpenseSinkOption("entryTransactionDestinationAccount");
+  updateTransactionTypeUI("transaction");
+  updateTransactionTypeUI("entryTransaction");
 }
 
 function fillOptions(id, items, includeEmpty, placeholder) {
@@ -977,6 +1048,75 @@ function fillOptions(id, items, includeEmpty, placeholder) {
   if (!includeEmpty && normalizedItems.length) {
     select.value = normalizedItems[0];
   }
+}
+
+function prependExpenseSinkOption(id) {
+  const select = document.getElementById(id);
+  if (!select) return;
+  if (!select.querySelector('option[value="expense_sink"]')) {
+    select.insertAdjacentHTML("afterbegin", '<option value="expense_sink">Depense</option>');
+  }
+}
+
+function updateTransactionTypeUI(prefix) {
+  const typeSelect = document.getElementById(prefix + "Type");
+  const sourceWrap = document.querySelector(`[data-role="source-account"][data-form-prefix="${prefix}"]`);
+  const destinationWrap = document.querySelector(`[data-role="destination-account"][data-form-prefix="${prefix}"]`);
+  const sourceSelect = document.getElementById(prefix + "Account");
+  const destinationSelect = document.getElementById(prefix + "DestinationAccount");
+  if (!typeSelect || !sourceWrap || !destinationWrap || !sourceSelect || !destinationSelect) return;
+
+  const type = typeSelect.value;
+  sourceWrap.classList.toggle("is-hidden", type === "income");
+  destinationWrap.classList.toggle("is-hidden", type === "expense");
+
+  sourceSelect.required = type === "expense" || type === "transfer";
+  destinationSelect.required = type === "income" || type === "transfer";
+
+  if (type === "expense") {
+    destinationSelect.value = "expense_sink";
+  }
+
+  if (type === "income") {
+    sourceSelect.value = "";
+  }
+
+  if (type === "transfer" && destinationSelect.value === "expense_sink") {
+    destinationSelect.value = "";
+  }
+}
+
+function readTransactionForm(prefix) {
+  updateTransactionTypeUI(prefix);
+  const type = document.getElementById(prefix + "Type").value;
+  const account = document.getElementById(prefix + "Account").value;
+  const destinationAccount = document.getElementById(prefix + "DestinationAccount").value;
+
+  if (type === "income" && !destinationAccount) {
+    throw new Error("Choisissez le compte qui recoit le revenu.");
+  }
+
+  if (type === "expense" && !account) {
+    throw new Error("Choisissez le compte debite pour cette depense.");
+  }
+
+  if (type === "transfer" && (!account || !destinationAccount)) {
+    throw new Error("Choisissez le compte source et le compte destination du transfert.");
+  }
+
+  return {
+    id: randomId(),
+    type,
+    amount: Number(document.getElementById(prefix + "Amount").value),
+    date: document.getElementById(prefix + "Date").value,
+    currency: document.getElementById(prefix + "Currency").value,
+    category: document.getElementById(prefix + "Category").value || "Non classe",
+    business: document.getElementById(prefix + "Business").value,
+    account: type === "income" ? "" : account,
+    destinationAccount: type === "expense" ? "expense_sink" : destinationAccount,
+    importance: Number(document.getElementById(prefix + "Importance").value),
+    note: document.getElementById(prefix + "Note").value.trim(),
+  };
 }
 
 function getDashboardPeriods() {
@@ -1311,14 +1451,7 @@ function setupNavigation() {
   document.querySelectorAll(".nav-link[data-view]").forEach(function (button) {
     button.addEventListener("click", function () {
       const target = button.getAttribute("data-view");
-      document.querySelectorAll(".nav-link[data-view]").forEach(function (item) {
-        item.classList.toggle("is-active", item.getAttribute("data-view") === target);
-      });
-      document.querySelectorAll(".view").forEach(function (view) {
-        view.classList.toggle("is-active", view.id === `${target}View`);
-      });
-      document.getElementById("viewTitle").textContent = button.textContent;
-      document.getElementById("mobileNav").classList.remove("is-open");
+      setActiveView(target);
     });
   });
 
@@ -1331,43 +1464,60 @@ function setupNavigation() {
 
 function setupForms() {
   document.getElementById("openTransactionModal").addEventListener("click", function () {
-    openModal("transactionModal");
+    openTransactionComposer();
   });
 
   document.getElementById("mobileTransactionButton").addEventListener("click", function () {
-    openModal("transactionModal");
+    openTransactionComposer();
     document.getElementById("mobileNav").classList.remove("is-open");
   });
 
   document.getElementById("dashboardQuickAdd").addEventListener("click", function () {
-    openModal("transactionModal");
+    openTransactionComposer();
   });
 
   document.getElementById("closeTransactionModal").addEventListener("click", function () {
-    closeModal("transactionModal");
+    closeTransactionComposer();
+  });
+
+  document.getElementById("closeTransactionEntry").addEventListener("click", function () {
+    closeTransactionComposer();
+  });
+
+  document.getElementById("transactionType").addEventListener("change", function () {
+    updateTransactionTypeUI("transaction");
+  });
+
+  document.getElementById("entryTransactionType").addEventListener("change", function () {
+    updateTransactionTypeUI("entryTransaction");
   });
 
   document.getElementById("transactionForm").addEventListener("submit", async function (event) {
     event.preventDefault();
-    const transaction = {
-      id: randomId(),
-      type: document.getElementById("transactionType").value,
-      amount: Number(document.getElementById("transactionAmount").value),
-      date: document.getElementById("transactionDate").value,
-      currency: document.getElementById("transactionCurrency").value,
-      category: document.getElementById("transactionCategory").value || "Non classe",
-      business: document.getElementById("transactionBusiness").value,
-      account: document.getElementById("transactionAccount").value,
-      destinationAccount: document.getElementById("transactionDestinationAccount").value,
-      importance: Number(document.getElementById("transactionImportance").value),
-      note: document.getElementById("transactionNote").value.trim(),
-    };
+    try {
+      state.transactions.push(readTransactionForm("transaction"));
+      await saveAndRender();
+      event.target.reset();
+      document.getElementById("transactionDate").value = new Date().toISOString().slice(0, 10);
+      closeTransactionComposer();
+      updateTransactionTypeUI("transaction");
+    } catch (error) {
+      showFeedback(error.message || "Impossible d'enregistrer cette transaction.", true);
+    }
+  });
 
-    state.transactions.push(transaction);
-    await saveAndRender();
-    event.target.reset();
-    document.getElementById("transactionDate").value = new Date().toISOString().slice(0, 10);
-    closeModal("transactionModal");
+  document.getElementById("transactionPageForm").addEventListener("submit", async function (event) {
+    event.preventDefault();
+    try {
+      state.transactions.push(readTransactionForm("entryTransaction"));
+      await saveAndRender();
+      event.target.reset();
+      document.getElementById("entryTransactionDate").value = new Date().toISOString().slice(0, 10);
+      closeTransactionComposer();
+      updateTransactionTypeUI("entryTransaction");
+    } catch (error) {
+      showFeedback(error.message || "Impossible d'enregistrer cette transaction.", true);
+    }
   });
 
   document.getElementById("accountForm").addEventListener("submit", async function (event) {
@@ -1412,11 +1562,6 @@ function setupForms() {
 
   ["typeFilter", "periodFilter", "searchFilter"].forEach(function (id) {
     document.getElementById(id).addEventListener("input", renderTransactionsTable);
-  });
-
-  document.getElementById("resetDemoData").addEventListener("click", async function () {
-    state = cloneDefaultState();
-    await saveAndRender();
   });
 
   document.getElementById("authButton").addEventListener("click", async function () {
@@ -1564,7 +1709,7 @@ function setupTheme() {
     localStorage.setItem(THEME_KEY, next);
     renderCharts();
     if (persistenceMode === "cloud") {
-      await saveState();
+      await saveRemoteSettingsOnly();
     }
   });
 
@@ -1575,7 +1720,7 @@ function setupTheme() {
     renderCharts();
     document.getElementById("mobileNav").classList.remove("is-open");
     if (persistenceMode === "cloud") {
-      await saveState();
+      await saveRemoteSettingsOnly();
     }
   });
 }
