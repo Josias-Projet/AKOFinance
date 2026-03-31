@@ -95,6 +95,10 @@ function getCurrentUser() {
   return session && session.user ? session.user : null;
 }
 
+function isTouchDeviceLayout() {
+  return window.matchMedia("(pointer: coarse), (hover: none)").matches;
+}
+
 function openModal(id) {
   const modal = document.getElementById(id);
   if (!modal) return;
@@ -103,7 +107,9 @@ function openModal(id) {
   }
   modal.setAttribute("open", "open");
   modal.setAttribute("aria-hidden", "false");
-  document.body.classList.add("has-open-modal");
+  if (!isTouchDeviceLayout()) {
+    document.body.classList.add("has-open-modal");
+  }
 }
 
 function closeModal(id) {
@@ -936,10 +942,15 @@ function removeCategory(name) {
 }
 
 function populateSelects() {
-  fillOptions("transactionCategory", state.categories, true, "Choisir une categorie");
-  fillOptions("transactionBusiness", state.businesses, true, "Aucun business");
-  fillOptions("transactionAccount", state.accounts.map(function (account) { return account.name; }), false, "Choisir un compte");
-  fillOptions("transactionDestinationAccount", state.accounts.map(function (account) { return account.name; }), true, "Choisir un compte de destination");
+  const fallbackAccounts = defaultState.accounts.map(function (account) { return account.name; });
+  const accountNames = (state.accounts || []).map(function (account) {
+    return typeof account === "string" ? account : account.name;
+  }).filter(Boolean);
+
+  fillOptions("transactionCategory", state.categories && state.categories.length ? state.categories : defaultState.categories, true, "Choisir une categorie");
+  fillOptions("transactionBusiness", state.businesses && state.businesses.length ? state.businesses : defaultState.businesses, true, "Aucun business");
+  fillOptions("transactionAccount", accountNames.length ? accountNames : fallbackAccounts, false, "Choisir un compte");
+  fillOptions("transactionDestinationAccount", accountNames.length ? accountNames : fallbackAccounts, true, "Choisir un compte de destination");
   document.getElementById("transactionDate").value = new Date().toISOString().slice(0, 10);
 }
 
