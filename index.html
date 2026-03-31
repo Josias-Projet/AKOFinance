@@ -311,6 +311,90 @@
         </div>
       </section>
 
+      <section class="view" id="transactionEntryView">
+        <article class="panel transaction-entry-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Nouvelle operation</p>
+              <h3>Enregistrer une transaction</h3>
+            </div>
+            <button class="ghost-button" type="button" id="closeTransactionEntry">Retour</button>
+          </div>
+
+          <form id="transactionPageForm">
+            <div class="form-grid">
+              <label>
+                Type
+                <select id="entryTransactionType" required>
+                  <option value="expense">Depense</option>
+                  <option value="income">Revenu</option>
+                  <option value="transfer">Transfert</option>
+                </select>
+              </label>
+              <label>
+                Montant
+                <input id="entryTransactionAmount" type="number" min="0" step="0.01" required>
+              </label>
+              <label>
+                Date
+                <input id="entryTransactionDate" type="date" required>
+              </label>
+              <label>
+                Devise
+                <select id="entryTransactionCurrency">
+                  <option value="XOF">XOF</option>
+                  <option value="EUR">EUR</option>
+                  <option value="USD">USD</option>
+                </select>
+              </label>
+              <label>
+                Categorie
+                <select id="entryTransactionCategory">
+                  <option value="">Choisir une categorie</option>
+                </select>
+              </label>
+              <label>
+                Business
+                <select id="entryTransactionBusiness">
+                  <option value="">Aucun business</option>
+                </select>
+              </label>
+              <label data-role="source-account" data-form-prefix="entryTransaction">
+                Compte source
+                <select id="entryTransactionAccount">
+                  <option value="">Choisir un compte</option>
+                </select>
+              </label>
+              <label data-role="destination-account" data-form-prefix="entryTransaction">
+                Compte destination
+                <select id="entryTransactionDestinationAccount">
+                  <option value="expense_sink">Depense</option>
+                  <option value="">Choisir un compte de destination</option>
+                </select>
+              </label>
+              <label>
+                Importance
+                <select id="entryTransactionImportance">
+                  <option value="1">1 - Faible</option>
+                  <option value="2">2 - Moderee</option>
+                  <option value="3">3 - Normale</option>
+                  <option value="4">4 - Haute</option>
+                  <option value="5">5 - Critique</option>
+                </select>
+              </label>
+              <label class="full-span">
+                Motif / note
+                <textarea id="entryTransactionNote" rows="4" placeholder="Ex: Achat pub Meta, repas equipe, encaissement client"></textarea>
+              </label>
+            </div>
+
+            <div class="modal-footer">
+              <button class="primary-button" type="submit">Enregistrer</button>
+            </div>
+          </form>
+        </article>
+      </section>
+
       <section class="view" id="transactionsView">
         <div class="section-toolbar">
           <div class="toolbar-group">
@@ -557,19 +641,28 @@
         </label>
         <label>
           Categorie
-          <select id="transactionCategory"></select>
+          <select id="transactionCategory">
+            <option value="">Choisir une categorie</option>
+          </select>
         </label>
         <label>
           Business
-          <select id="transactionBusiness"></select>
+          <select id="transactionBusiness">
+            <option value="">Aucun business</option>
+          </select>
         </label>
-        <label>
+        <label data-role="source-account" data-form-prefix="transaction">
           Compte source
-          <select id="transactionAccount"></select>
+          <select id="transactionAccount">
+            <option value="">Choisir un compte</option>
+          </select>
         </label>
-        <label>
+        <label data-role="destination-account" data-form-prefix="transaction">
           Compte destination
-          <select id="transactionDestinationAccount"></select>
+          <select id="transactionDestinationAccount">
+            <option value="expense_sink">Depense</option>
+            <option value="">Choisir un compte de destination</option>
+          </select>
         </label>
         <label>
           Importance
@@ -588,7 +681,6 @@
       </div>
 
       <div class="modal-footer">
-        <button class="ghost-button" type="button" id="resetDemoData">Reinitialiser les donnees</button>
         <button class="primary-button" type="submit">Enregistrer</button>
       </div>
     </form>
