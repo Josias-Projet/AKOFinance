@@ -822,6 +822,10 @@ th {
 }
 
 @media (max-width: 720px), (hover: none), (pointer: coarse) {
+  body.has-open-modal {
+    overflow: auto;
+  }
+
   .workspace {
     padding: 18px;
   }
@@ -862,6 +866,7 @@ th {
     padding: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    background: rgba(15, 20, 23, 0.42);
   }
 
   .modal[open] {
@@ -878,10 +883,16 @@ th {
   }
 
   .modal-card {
-    min-height: calc(100dvh - 24px);
-    margin-top: 24px;
-    overflow-y: auto;
+    min-height: 100dvh;
+    margin-top: 0;
+    padding-top: 18px;
+    padding-bottom: 32px;
+    overflow-y: visible;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
   }
 
   .auth-screen {
