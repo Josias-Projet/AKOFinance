@@ -747,10 +747,6 @@ th {
   display: none !important;
 }
 
-label.is-hidden {
-  display: none !important;
-}
-
 .auth-form-grid {
   grid-template-columns: 1fr;
 }
