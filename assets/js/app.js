@@ -239,6 +239,53 @@ function setUserChip(text) {
   return text;
 }
 
+let _saveToastTimer = null;
+
+function showSaveToast(text) {
+  const toast = document.getElementById("saveToast");
+  const label = document.getElementById("saveToastText");
+  if (!toast || !label) return;
+  if (_saveToastTimer) { clearTimeout(_saveToastTimer); _saveToastTimer = null; }
+  toast.classList.remove("is-done");
+  label.textContent = text || "Enregistrement en cours…";
+  toast.classList.add("is-visible");
+}
+
+function doneSaveToast(text) {
+  const toast = document.getElementById("saveToast");
+  const label = document.getElementById("saveToastText");
+  if (!toast || !label) return;
+  toast.classList.add("is-done");
+  label.textContent = text || "Sauvegarde reussie";
+  _saveToastTimer = setTimeout(function () {
+    toast.classList.remove("is-visible", "is-done");
+  }, 2000);
+}
+
+function hideSaveToast() {
+  const toast = document.getElementById("saveToast");
+  if (!toast) return;
+  if (_saveToastTimer) { clearTimeout(_saveToastTimer); _saveToastTimer = null; }
+  toast.classList.remove("is-visible", "is-done");
+}
+
+function setSavingButtons(saving) {
+  document.querySelectorAll("button[type='submit'], button[type='button'].primary-button").forEach(function (btn) {
+    if (saving) {
+      if (!btn.querySelector(".ako-spinner")) {
+        const spin = document.createElement("span");
+        spin.className = "ako-spinner";
+        btn.prepend(spin);
+      }
+      btn.disabled = true;
+    } else {
+      const spin = btn.querySelector(".ako-spinner");
+      if (spin) spin.remove();
+      btn.disabled = false;
+    }
+  });
+}
+
 function normalizeStateShape(rawState) {
   const nextState = rawState ? cloneData(rawState) : cloneDefaultState();
   nextState.accounts = (nextState.accounts || []).map(function (account) {
@@ -412,10 +459,14 @@ async function saveState() {
   if (persistenceMode === "cloud" && session && supabaseClient && cloudStateHydrated) {
     try {
       await saveRemoteState();
+      doneSaveToast("Sauvegarde reussie ✓");
     } catch (error) {
       console.error(error);
+      hideSaveToast();
       showFeedback("Sauvegarde cloud echouee. Les donnees locales restent disponibles.", true);
       setSyncStatus("Cloud indisponible");
+    } finally {
+      setSavingButtons(false);
     }
   }
 }
@@ -423,16 +474,7 @@ async function saveState() {
 async function saveRemoteState() {
   const currentUser = getCurrentUser();
   if (!currentUser || !supabaseClient) return;
-  const authUserResult = await supabaseClient.auth.getUser();
-  if (authUserResult.error || !authUserResult.data || !authUserResult.data.user) {
-    throw authUserResult.error || new Error("Utilisateur non authentifie.");
-  }
-
-  const authUser = authUserResult.data.user;
-  const userId = authUser.id;
-  if (userId !== currentUser.id) {
-    throw new Error("Session utilisateur incoherente.");
-  }
+  const userId = currentUser.id;
 
   const theme = document.body.dataset.theme || "light";
   setSyncStatus("Sauvegarde cloud");
@@ -494,13 +536,20 @@ async function saveRemoteSettingsOnly() {
   const currentUser = getCurrentUser();
   if (!currentUser || !supabaseClient || !cloudStateHydrated) return;
 
-  const result = await supabaseClient.from("app_settings").upsert({
-    user_id: currentUser.id,
-    currency: state.settings.currency,
-    theme: document.body.dataset.theme || "light",
-  }, { onConflict: "user_id" });
+  showSaveToast("Sauvegarde du theme…");
+  try {
+    const result = await supabaseClient.from("app_settings").upsert({
+      user_id: currentUser.id,
+      currency: state.settings.currency,
+      theme: document.body.dataset.theme || "light",
+    }, { onConflict: "user_id" });
 
-  if (result.error) throw result.error;
+    if (result.error) throw result.error;
+    doneSaveToast("Theme sauvegarde ✓");
+  } catch (error) {
+    hideSaveToast();
+    throw error;
+  }
 }
 
 async function replaceRemoteTable(table, rows) {
@@ -1365,8 +1414,15 @@ function destroyCharts() {
 }
 
 async function saveAndRender() {
+  const isCloud = persistenceMode === "cloud" && session && supabaseClient && cloudStateHydrated;
+  if (isCloud) {
+    showSaveToast("Enregistrement en cours…");
+  }
   populateSelects();
   renderAll();
+  if (isCloud) {
+    setSavingButtons(true);
+  }
   await saveState();
 }
 
@@ -1422,42 +1478,57 @@ async function updateProfile() {
   const avatarInput = document.getElementById("profileAvatarInput");
   let avatarUrl = currentUser.user_metadata && currentUser.user_metadata.avatar_url ? currentUser.user_metadata.avatar_url : "";
 
-  if (avatarInput.files && avatarInput.files[0]) {
-    const file = avatarInput.files[0];
-    const path = `${currentUser.id}/${Date.now()}-${file.name}`;
-    const uploadResult = await supabaseClient.storage.from("avatars").upload(path, file, {
-      upsert: true,
+  setSavingButtons(true);
+  showSaveToast("Mise a jour du profil…");
+
+  try {
+    if (avatarInput.files && avatarInput.files[0]) {
+      const file = avatarInput.files[0];
+      const path = `${currentUser.id}/${Date.now()}-${file.name}`;
+      const uploadResult = await supabaseClient.storage.from("avatars").upload(path, file, {
+        upsert: true,
+      });
+      if (uploadResult.error) {
+        hideSaveToast();
+        showFeedback("Upload de la photo impossible. Creez d'abord le bucket public `avatars` dans Supabase.", true);
+        setSavingButtons(false);
+        return;
+      }
+      const publicUrlResult = supabaseClient.storage.from("avatars").getPublicUrl(path);
+      avatarUrl = publicUrlResult.data.publicUrl;
+    }
+
+    const updateResult = await supabaseClient.auth.updateUser({
+      data: {
+        full_name: fullName,
+        avatar_url: avatarUrl,
+      },
     });
-    if (uploadResult.error) {
-      showFeedback("Upload de la photo impossible. Creez d'abord le bucket public `avatars` dans Supabase.", true);
+
+    if (updateResult.error) {
+      hideSaveToast();
+      showFeedback(toFriendlyAuthError(updateResult.error), true);
+      setSavingButtons(false);
       return;
     }
-    const publicUrlResult = supabaseClient.storage.from("avatars").getPublicUrl(path);
-    avatarUrl = publicUrlResult.data.publicUrl;
-  }
 
-  const updateResult = await supabaseClient.auth.updateUser({
-    data: {
+    await supabaseClient.from("profiles").upsert({
+      id: currentUser.id,
       full_name: fullName,
+      email: currentUser.email,
       avatar_url: avatarUrl,
-    },
-  });
+    }, { onConflict: "id" });
 
-  if (updateResult.error) {
-    showFeedback(toFriendlyAuthError(updateResult.error), true);
-    return;
+    session = (await supabaseClient.auth.getSession()).data.session;
+    populateProfileView();
+    doneSaveToast("Profil mis a jour ✓");
+    showFeedback("Profil mis a jour.");
+  } catch (error) {
+    hideSaveToast();
+    showFeedback(toFriendlyAuthError(error), true);
+  } finally {
+    setSavingButtons(false);
   }
-
-  await supabaseClient.from("profiles").upsert({
-    id: currentUser.id,
-    full_name: fullName,
-    email: currentUser.email,
-    avatar_url: avatarUrl,
-  }, { onConflict: "id" });
-
-  session = (await supabaseClient.auth.getSession()).data.session;
-  populateProfileView();
-  showFeedback("Profil mis a jour.");
 }
 
 async function updatePassword() {
@@ -1477,17 +1548,27 @@ async function updatePassword() {
     return;
   }
 
-  const result = await supabaseClient.auth.updateUser({
-    password,
-  });
+  setSavingButtons(true);
+  showSaveToast("Mise a jour du mot de passe…");
 
-  if (result.error) {
-    showFeedback(toFriendlyAuthError(result.error), true);
-    return;
+  try {
+    const result = await supabaseClient.auth.updateUser({ password });
+
+    if (result.error) {
+      hideSaveToast();
+      showFeedback(toFriendlyAuthError(result.error), true);
+      return;
+    }
+
+    document.getElementById("passwordForm").reset();
+    doneSaveToast("Mot de passe mis a jour ✓");
+    showFeedback("Mot de passe mis a jour.");
+  } catch (error) {
+    hideSaveToast();
+    showFeedback(toFriendlyAuthError(error), true);
+  } finally {
+    setSavingButtons(false);
   }
-
-  document.getElementById("passwordForm").reset();
-  showFeedback("Mot de passe mis a jour.");
 }
 
 function setupNavigation() {
