@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AKOFinance</title>
+  <meta name="description" content="AKOFinance, cockpit financier personnel et business.">
+  <meta name="theme-color" content="#0e7a5f">
+  <link rel="icon" href="./assets/icons/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="./assets/icons/icon-192.png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/css/app.css">
+</head>
+<body>
+  <section class="auth-screen is-active" id="authScreen">
+    <div class="auth-screen-shell">
+      <section class="auth-aside">
+        <img class="brand-logo" src="./assets/images/logo.png" alt="Logo AKOFinance" onerror="this.onerror=null;this.src='./assets/icons/icon-192.png';">
+        <strong class="brand-wordmark">AKOFinance</strong>
+        <h2>Connexion et inscription</h2>
+        <p>Connectez-vous pour retrouver vos donnees sur tous vos appareils et gerer vos finances dans un espace prive.</p>
+        <div class="stack-list">
+          <div class="list-item">
+            <strong>Configuration initiale</strong>
+            <span class="muted">Definissez vos comptes, soldes de depart, categories et activites a votre rythme.</span>
+          </div>
+          <div class="list-item">
+            <strong>Synchronisation</strong>
+            <span class="muted">Conservez vos donnees et reprenez votre suivi financier sur mobile et ordinateur.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="auth-main">
+        <div class="panel-heading auth-tabs">
+          <button class="nav-link is-active" type="button" data-auth-tab="login">Connexion</button>
+          <button class="nav-link" type="button" data-auth-tab="register">Inscription</button>
+        </div>
+
+        <div id="authFeedback" class="auth-feedback muted">Connectez-vous pour acceder a votre espace AKOFinance.</div>
+
+        <form id="loginForm" class="auth-panel is-active">
+            <div class="form-grid auth-form-grid">
+              <label class="full-span">
+                Email
+                <input id="loginEmail" type="email" placeholder="vous@exemple.com" required>
+              </label>
+              <label class="full-span">
+                Mot de passe
+                <div class="password-field">
+                  <input id="loginPassword" type="password" placeholder="Votre mot de passe" required>
+                  <button class="ghost-button small-button toggle-password" type="button" data-password-target="loginPassword">Afficher</button>
+                </div>
+              </label>
+            </div>
+            <div class="auth-helper-row">
+              <button class="link-button" type="button" id="openForgotPassword">Mot de passe oublie ?</button>
+            </div>
+            <div class="modal-footer">
+              <button class="ghost-button" type="button" id="continueDemoButton">Continuer en demo</button>
+              <button class="primary-button" type="submit">Se connecter</button>
+            </div>
+        </form>
+
+        <form id="registerForm" class="auth-panel">
+            <div class="form-grid auth-form-grid">
+              <label class="full-span">
+                Nom complet
+                <input id="registerName" type="text" placeholder="Votre nom complet" required>
+              </label>
+              <label class="full-span">
+                Email
+                <input id="registerEmail" type="email" placeholder="vous@exemple.com" required>
+              </label>
+              <label class="full-span">
+                Mot de passe
+                <div class="password-field">
+                  <input id="registerPassword" type="password" placeholder="Minimum 6 caracteres" minlength="6" required>
+                  <button class="ghost-button small-button toggle-password" type="button" data-password-target="registerPassword">Afficher</button>
+                </div>
+              </label>
+              <label class="full-span">
+                Confirmer le mot de passe
+                <div class="password-field">
+                  <input id="registerPasswordConfirm" type="password" placeholder="Retapez votre mot de passe" minlength="6" required>
+                  <button class="ghost-button small-button toggle-password" type="button" data-password-target="registerPasswordConfirm">Afficher</button>
+                </div>
+              </label>
+              <label class="full-span">
+                Question de securite
+                <select id="securityQuestionSelect" required>
+                  <option value="">Choisir une question</option>
+                  <option value="Quel est le prenom de votre mere ?">Quel est le prenom de votre mere ?</option>
+                  <option value="Quel est le nom de votre premier enseignant ?">Quel est le nom de votre premier enseignant ?</option>
+                  <option value="Dans quelle ville etes-vous ne ?">Dans quelle ville etes-vous ne ?</option>
+                  <option value="Quel est le nom de votre premier meilleur ami ?">Quel est le nom de votre premier meilleur ami ?</option>
+                  <option value="custom">Personnaliser ma question</option>
+                </select>
+              </label>
+              <label class="full-span is-hidden" id="customSecurityQuestionWrap">
+                Votre question personnalisee
+                <input id="customSecurityQuestion" type="text" placeholder="Saisissez votre question">
+              </label>
+              <label class="full-span">
+                Reponse de securite
+                <input id="securityAnswer" type="text" placeholder="Votre reponse secrete" required>
+              </label>
+            </div>
+            <div class="modal-footer">
+              <button class="ghost-button" type="button" id="registerDemoButton">Rester en demo</button>
+              <button class="primary-button" type="submit">Creer un compte</button>
+            </div>
+        </form>
+
+        <form id="forgotPasswordForm" class="auth-panel">
+            <div class="form-grid auth-form-grid">
+              <label class="full-span">
+                Email
+                <input id="forgotEmail" type="email" placeholder="vous@exemple.com" required>
+              </label>
+              <div class="full-span" id="forgotQuestionBlock"></div>
+              <label class="full-span is-hidden" id="forgotAnswerWrap">
+                Reponse a la question
+                <input id="forgotAnswer" type="text" placeholder="Votre reponse">
+              </label>
+            </div>
+            <div class="modal-footer">
+              <button class="ghost-button" type="button" id="backToLogin">Retour</button>
+              <button class="primary-button" type="submit" id="forgotSubmitButton">Verifier</button>
+            </div>
+        </form>
+      </section>
+    </div>
+  </section>
+
+  <div class="app-shell is-hidden" id="appShell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div>
+          <p class="eyebrow">Cockpit financier</p>
+          <h1>AKOFinance</h1>
+        </div>
+        <img class="brand-logo" src="./assets/images/logo.png" alt="Logo AKOFinance" onerror="this.onerror=null;this.src='./assets/icons/icon-192.png';">
+      </div>
+
+      <nav class="nav-links">
+        <button class="nav-link is-active" data-view="dashboard">Dashboard</button>
+        <button class="nav-link" data-view="transactions">Transactions</button>
+        <button class="nav-link" data-view="business">Business</button>
+        <button class="nav-link" data-view="accounts">Comptes</button>
+        <button class="nav-link" data-view="budgets">Budgets</button>
+        <button class="nav-link" data-view="profile">Profil</button>
+        <button class="nav-link" data-view="settings">Parametres</button>
+      </nav>
+
+      <section class="sidebar-card">
+        <p class="eyebrow">Vision</p>
+        <h2>Voir clair. Decider mieux. Gerer chaque franc.</h2>
+        <p>Organisez vos comptes, vos depenses, vos revenus et vos activites dans une interface claire, sobre et exploitable au quotidien.</p>
+      </section>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div class="topbar-brand">
+          <div>
+            <strong class="brand-wordmark">AKOFinance</strong>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <button class="ghost-button" id="authButton" type="button">Connexion</button>
+          <button class="ghost-button" id="themeToggle" type="button">Theme</button>
+          <button class="ghost-button" id="installButton" type="button">Installer la PWA</button>
+          <button class="primary-button" id="openTransactionModal" type="button">Nouvelle operation</button>
+        </div>
+
+        <div class="mobile-header-actions">
+          <button class="ghost-button icon-button menu-button" id="mobileMenuToggle" type="button" aria-label="Menu">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+      </header>
+
+      <section class="page-heading">
+        <p class="eyebrow">Espace principal</p>
+        <h2 id="viewTitle">Dashboard</h2>
+      </section>
+
+      <section class="mobile-nav" id="mobileNav">
+        <button class="nav-link is-active" data-view="dashboard">Dashboard</button>
+        <button class="nav-link" data-view="transactions">Transactions</button>
+        <button class="nav-link" data-view="business">Business</button>
+        <button class="nav-link" data-view="accounts">Comptes</button>
+        <button class="nav-link" data-view="profile">Profil</button>
+        <button class="nav-link" data-view="settings">Parametres</button>
+        <button class="ghost-button" id="mobileThemeButton" type="button">Theme</button>
+        <button class="ghost-button" id="mobileInstallButton" type="button">Installer la PWA</button>
+        <button class="primary-button" id="mobileTransactionButton" type="button">Nouvelle operation</button>
+      </section>
+
+      <section class="view is-active" id="dashboardView">
+        <div class="dashboard-toolbar panel">
+          <div>
+            <p class="eyebrow">Dashboard</p>
+            <h3>Vue principale</h3>
+          </div>
+          <button class="primary-button" id="dashboardQuickAdd" type="button">Ajouter une transaction</button>
+        </div>
+
+        <div class="hero-panel">
+          <div>
+            <p class="eyebrow">Vue globale</p>
+            <h3>Pilotage financier personnel et business</h3>
+            <p class="hero-copy">Suivez vos revenus, depenses, comptes, budgets et activites dans une seule interface claire, configuree autour de vos propres donnees.</p>
+          </div>
+          <div class="hero-stats">
+            <div>
+              <span>Devise principale</span>
+              <strong>XOF</strong>
+            </div>
+            <div>
+              <span>Demarrage</span>
+              <strong>Configuration manuelle</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpi-grid" id="kpiGrid"></div>
+
+        <div class="dashboard-grid">
+          <article class="panel chart-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Performance</p>
+                <h3>Cashflow sur 6 mois</h3>
+              </div>
+              <div class="chart-filters">
+                <select id="chartRangeType">
+                  <option value="month">Mois</option>
+                  <option value="week">Semaine</option>
+                  <option value="year">Annee</option>
+                </select>
+                <select id="chartMonth">
+                  <option value="1">Janv.</option>
+                  <option value="2">Fevr.</option>
+                  <option value="3">Mars</option>
+                  <option value="4">Avr.</option>
+                  <option value="5">Mai</option>
+                  <option value="6">Juin</option>
+                  <option value="7">Juil.</option>
+                  <option value="8">Aout</option>
+                  <option value="9">Sept.</option>
+                  <option value="10">Oct.</option>
+                  <option value="11">Nov.</option>
+                  <option value="12">Dec.</option>
+                </select>
+                <select id="chartSpan">
+                  <option value="1">1 periode</option>
+                  <option value="2">2 periodes</option>
+                  <option value="3">3 periodes</option>
+                  <option value="6">6 periodes</option>
+                </select>
+                <select id="chartYear"></select>
+              </div>
+            </div>
+            <div class="chart-frame">
+              <canvas id="cashflowChart" height="140"></canvas>
+            </div>
+          </article>
+
+          <article class="panel chart-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Depenses</p>
+                <h3>Repartition par categorie</h3>
+              </div>
+              <div class="chart-filters">
+                <span class="muted" id="chartFilterSummary">Mois courant</span>
+              </div>
+            </div>
+            <div class="chart-frame">
+              <canvas id="categoryChart" height="140"></canvas>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Alertes</p>
+                <h3>Points de vigilance</h3>
+              </div>
+            </div>
+            <div id="alertsList" class="stack-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Activite recente</p>
+                <h3>Dernieres operations</h3>
+              </div>
+            </div>
+            <div id="recentTransactions" class="stack-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view" id="transactionsView">
+        <div class="section-toolbar">
+          <div class="toolbar-group">
+            <label for="typeFilter">Type</label>
+            <select id="typeFilter">
+              <option value="all">Tous</option>
+              <option value="income">Revenus</option>
+              <option value="expense">Depenses</option>
+              <option value="transfer">Transferts</option>
+            </select>
+          </div>
+          <div class="toolbar-group">
+            <label for="periodFilter">Periode</label>
+            <select id="periodFilter">
+              <option value="month">Mois courant</option>
+              <option value="week">Semaine</option>
+              <option value="year">Annee</option>
+              <option value="all">Tout</option>
+            </select>
+          </div>
+          <div class="toolbar-group wide">
+            <label for="searchFilter">Recherche</label>
+            <input id="searchFilter" type="search" placeholder="Motif, categorie, business, compte">
+          </div>
+        </div>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Journal</p>
+              <h3>Toutes les transactions</h3>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Montant</th>
+                  <th>Categorie / Business</th>
+                  <th>Compte</th>
+                  <th>Importance</th>
+                </tr>
+              </thead>
+              <tbody id="transactionsTableBody"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section class="view" id="businessView">
+        <div class="panel-grid" id="businessCards"></div>
+      </section>
+
+      <section class="view" id="accountsView">
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Soldes initiaux</p>
+              <h3>Definir vos soldes de depart</h3>
+            </div>
+          </div>
+          <div id="accountsSetupList" class="stack-list"></div>
+        </article>
+        <div class="panel-grid" id="accountsCards"></div>
+      </section>
+
+      <section class="view" id="budgetsView">
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Budgets</p>
+              <h3>Suivi mensuel par categorie</h3>
+            </div>
+          </div>
+          <div id="budgetsList" class="stack-list"></div>
+        </article>
+      </section>
+
+      <section class="view" id="profileView">
+        <div class="panel-grid settings-grid">
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Profil</p>
+                <h3>Informations personnelles</h3>
+              </div>
+            </div>
+            <div class="profile-summary">
+              <img id="profileAvatarPreview" class="profile-avatar" src="./assets/images/logo.png" alt="Photo de profil" onerror="this.onerror=null;this.src='./assets/icons/icon-192.png';">
+              <div>
+                <strong id="profileNameDisplay">Mon profil</strong>
+                <p class="muted" id="profileEmailDisplay">Aucune adresse email</p>
+              </div>
+            </div>
+            <form id="profileForm" class="form-grid auth-form-grid">
+              <label class="full-span">
+                Nom complet
+                <input id="profileNameInput" type="text" placeholder="Votre nom complet">
+              </label>
+              <label class="full-span">
+                Email
+                <input id="profileEmailInput" type="email" disabled>
+              </label>
+              <label class="full-span">
+                Photo de profil
+                <input id="profileAvatarInput" type="file" accept="image/png,image/jpeg,image/webp">
+              </label>
+              <button class="primary-button" type="submit">Mettre a jour le profil</button>
+            </form>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Securite</p>
+                <h3>Mot de passe</h3>
+              </div>
+            </div>
+            <form id="passwordForm" class="form-grid auth-form-grid">
+              <label class="full-span">
+                Nouveau mot de passe
+                <div class="password-field">
+                  <input id="profilePassword" type="password" minlength="6" placeholder="Nouveau mot de passe">
+                  <button class="ghost-button small-button toggle-password" type="button" data-password-target="profilePassword">Afficher</button>
+                </div>
+              </label>
+              <label class="full-span">
+                Confirmer le nouveau mot de passe
+                <div class="password-field">
+                  <input id="profilePasswordConfirm" type="password" minlength="6" placeholder="Confirmer le mot de passe">
+                  <button class="ghost-button small-button toggle-password" type="button" data-password-target="profilePasswordConfirm">Afficher</button>
+                </div>
+              </label>
+              <button class="primary-button" type="submit">Changer le mot de passe</button>
+            </form>
+          </article>
+        </div>
+      </section>
+
+      <section class="view" id="settingsView">
+        <div class="panel-grid settings-grid">
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Comptes dynamiques</p>
+                <h3>Ajouter un portefeuille</h3>
+              </div>
+            </div>
+            <form id="accountForm" class="inline-form">
+              <input id="accountNameInput" type="text" placeholder="Ex: UBA, Orange Money" required>
+              <input id="accountBalanceInput" type="number" min="0" step="0.01" placeholder="Solde initial">
+              <button class="primary-button" type="submit">Ajouter</button>
+            </form>
+            <div id="settingsAccounts" class="tag-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Business dynamiques</p>
+                <h3>Ajouter une activite</h3>
+              </div>
+            </div>
+            <form id="businessForm" class="inline-form">
+              <input id="businessNameInput" type="text" placeholder="Ex: Trading, Consulting" required>
+              <button class="primary-button" type="submit">Ajouter</button>
+            </form>
+            <div id="settingsBusinesses" class="tag-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Categories dynamiques</p>
+                <h3>Ajouter une categorie</h3>
+              </div>
+            </div>
+            <form id="categoryForm" class="inline-form">
+              <input id="categoryNameInput" type="text" placeholder="Ex: Assurance, Maintenance" required>
+              <button class="primary-button" type="submit">Ajouter</button>
+            </form>
+            <div id="settingsCategories" class="tag-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Configuration</p>
+                <h3>Etat de la plateforme</h3>
+              </div>
+            </div>
+            <ul class="status-list">
+              <li>Theme clair/sombre actif</li>
+              <li>PWA installable via bouton ou navigateur</li>
+              <li>Soldes initiaux definis manuellement par compte</li>
+              <li>Categories, comptes et business geres depuis l'interface</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="site-footer is-hidden">
+    AKOFinance by Josias Akodjenou, Tout droit reserve.
+  </footer>
+
+  <div class="modal" id="transactionModal" aria-hidden="true">
+    <form id="transactionForm" class="modal-card">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Nouvelle operation</p>
+          <h3>Enregistrer une transaction</h3>
+        </div>
+        <button class="ghost-button" type="button" id="closeTransactionModal">Fermer</button>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          Type
+          <select id="transactionType" required>
+            <option value="expense">Depense</option>
+            <option value="income">Revenu</option>
+            <option value="transfer">Transfert</option>
+          </select>
+        </label>
+        <label>
+          Montant
+          <input id="transactionAmount" type="number" min="0" step="0.01" required>
+        </label>
+        <label>
+          Date
+          <input id="transactionDate" type="date" required>
+        </label>
+        <label>
+          Devise
+          <select id="transactionCurrency">
+            <option value="XOF">XOF</option>
+            <option value="EUR">EUR</option>
+            <option value="USD">USD</option>
+          </select>
+        </label>
+        <label>
+          Categorie
+          <select id="transactionCategory"></select>
+        </label>
+        <label>
+          Business
+          <select id="transactionBusiness"></select>
+        </label>
+        <label>
+          Compte source
+          <select id="transactionAccount"></select>
+        </label>
+        <label>
+          Compte destination
+          <select id="transactionDestinationAccount"></select>
+        </label>
+        <label>
+          Importance
+          <select id="transactionImportance">
+            <option value="1">1 - Faible</option>
+            <option value="2">2 - Moderee</option>
+            <option value="3">3 - Normale</option>
+            <option value="4">4 - Haute</option>
+            <option value="5">5 - Critique</option>
+          </select>
+        </label>
+        <label class="full-span">
+          Motif / note
+          <textarea id="transactionNote" rows="3" placeholder="Ex: Achat pub Meta, repas equipe, encaissement client"></textarea>
+        </label>
+      </div>
+
+      <div class="modal-footer">
+        <button class="ghost-button" type="button" id="resetDemoData">Reinitialiser les donnees</button>
+        <button class="primary-button" type="submit">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./assets/js/config.js"></script>
+  <script src="./assets/js/app.js" defer></script>
+</body>
+</html>
