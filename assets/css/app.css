@@ -644,9 +644,8 @@ th {
 }
 
 .modal[open] {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
 }
 
 #accountsSetupList .inline-form {
@@ -861,10 +860,12 @@ th {
 
   .modal {
     padding: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .modal[open] {
-    align-items: end;
+    display: block;
   }
 
   .modal-card,
@@ -874,6 +875,13 @@ th {
     max-height: none;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
+  }
+
+  .modal-card {
+    min-height: calc(100dvh - 24px);
+    margin-top: 24px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .auth-screen {
