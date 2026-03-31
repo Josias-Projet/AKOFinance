@@ -98,6 +98,9 @@ function getCurrentUser() {
 function openModal(id) {
   const modal = document.getElementById(id);
   if (!modal) return;
+  if (id === "transactionModal") {
+    populateSelects();
+  }
   modal.setAttribute("open", "open");
   modal.setAttribute("aria-hidden", "false");
   document.body.classList.add("has-open-modal");
@@ -933,19 +936,36 @@ function removeCategory(name) {
 }
 
 function populateSelects() {
-  fillOptions("transactionCategory", state.categories, true);
-  fillOptions("transactionBusiness", state.businesses, true);
-  fillOptions("transactionAccount", state.accounts.map(function (account) { return account.name; }), false);
-  fillOptions("transactionDestinationAccount", state.accounts.map(function (account) { return account.name; }), true);
+  fillOptions("transactionCategory", state.categories, true, "Choisir une categorie");
+  fillOptions("transactionBusiness", state.businesses, true, "Aucun business");
+  fillOptions("transactionAccount", state.accounts.map(function (account) { return account.name; }), false, "Choisir un compte");
+  fillOptions("transactionDestinationAccount", state.accounts.map(function (account) { return account.name; }), true, "Choisir un compte de destination");
   document.getElementById("transactionDate").value = new Date().toISOString().slice(0, 10);
 }
 
-function fillOptions(id, items, includeEmpty) {
+function fillOptions(id, items, includeEmpty, placeholder) {
   const select = document.getElementById(id);
-  const first = includeEmpty ? `<option value="">Aucun</option>` : "";
-  select.innerHTML = first + items.map(function (item) {
+  if (!select) return;
+
+  const normalizedItems = (items || [])
+    .map(function (item) {
+      if (typeof item === "string") return item;
+      if (item && typeof item === "object") return item.name || item.label || item.value || "";
+      return "";
+    })
+    .filter(Boolean);
+
+  const first = includeEmpty || placeholder
+    ? `<option value="">${placeholder || "Aucun"}</option>`
+    : "";
+
+  select.innerHTML = first + normalizedItems.map(function (item) {
     return `<option value="${item}">${item}</option>`;
   }).join("");
+
+  if (!includeEmpty && normalizedItems.length) {
+    select.value = normalizedItems[0];
+  }
 }
 
 function getDashboardPeriods() {
