@@ -321,31 +321,23 @@ async function initSupabase() {
     return;
   }
 
-  supabaseClient = window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey);
-  const sessionResult = await supabaseClient.auth.getSession();
-  if (sessionResult.error) {
-    console.error(sessionResult.error);
-    setSyncStatus("Erreur Supabase");
-    return;
-  }
-
-  session = sessionResult.data.session;
-  if (session) {
-    persistenceMode = "cloud";
-    await hydrateFromCloud();
-  } else {
-    cloudStateHydrated = false;
-    setSyncStatus("Supabase configure");
-    setUserChip("Non connecte");
-  }
-
-  updateAccessLock();
+  supabaseClient = window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+    },
+  });
 
   supabaseClient.auth.onAuthStateChange(async function (_event, nextSession) {
+    const wasLoggedIn = Boolean(session);
     session = nextSession;
+
     if (session) {
       persistenceMode = "cloud";
-      await hydrateFromCloud();
+      if (!cloudStateHydrated || !wasLoggedIn) {
+        await hydrateFromCloud();
+      }
     } else {
       persistenceMode = "local";
       cloudStateHydrated = false;
@@ -353,6 +345,7 @@ async function initSupabase() {
       populateSelects();
       renderAll();
     }
+
     updateAuthUI();
     updateAccessLock();
   });
@@ -1519,7 +1512,9 @@ async function updateProfile() {
       avatar_url: avatarUrl,
     }, { onConflict: "id" });
 
-    session = (await supabaseClient.auth.getSession()).data.session;
+    session = updateResult.data && updateResult.data.user
+      ? { ...session, user: updateResult.data.user }
+      : session;
     populateProfileView();
     doneSaveToast("Profil mis a jour ✓");
     showFeedback("Profil mis a jour.");
